@@ -1,48 +1,40 @@
-import streamlit as st
-import pandas as pd
-from decimal import Decimal, ROUND_HALF_UP
+Sub EvaluarOfertas()
+    Dim ultimaFila As Long
+    Dim i As Long
+    Dim menorValor As Double
+    Dim celda As Range
 
-st.set_page_config(page_title="Emulador de Contratación Pública", layout="wide")
+    ' Determinar la última fila con datos en la columna A
+    ultimaFila = Cells(Rows.Count, 1).End(xlUp).Row
 
-st.title("Emulador con Redondeo a 5 y 2 Decimales")
-st.markdown("Ingresa ofertas con hasta **16 decimales**. El sistema redondea a **5 y 2 decimales** y selecciona al ganador automáticamente por menor valor exacto.")
+    ' Borrar columnas B, C y D por si hay datos antiguos
+    Range("B2:D" & ultimaFila).ClearContents
 
-# Número de participantes
-num_offers = st.number_input("Cantidad de participantes", min_value=2, max_value=20, value=8)
+    ' Calcular valores redondeados en columna B y visualización
+    For i = 2 To ultimaFila
+        Cells(i, 2).Value = Round(Cells(i, 1).Value, 4) ' Columna B: Redondeado a 4 decimales
+    Next i
 
-# Formulario para ingresar ofertas
-offers = []
-st.subheader("Ofertas ingresadas")
-for i in range(num_offers):
-    val = st.text_input(f"Oferente {i+1} - Valor (hasta 16 decimales)", value="")
-    offers.append(val)
+    ' Encontrar el menor valor real (sin redondear)
+    menorValor = Cells(2, 1).Value
+    For i = 3 To ultimaFila
+        If Cells(i, 1).Value < menorValor Then
+            menorValor = Cells(i, 1).Value
+        End If
+    Next i
 
-# Procesar si todas las ofertas están llenas
-if all(offers):
-    results = []
-    for i, val in enumerate(offers):
-        try:
-            val_decimal = Decimal(val).quantize(Decimal('1.0000000000000000'))
-            rounded_5 = val_decimal.quantize(Decimal('1.00000'), rounding=ROUND_HALF_UP)
-            rounded_2 = val_decimal.quantize(Decimal('1.00'), rounding=ROUND_HALF_UP)
-            results.append({
-                "Participante": f"Oferente {i+1}",
-                "Valor (16 decimales)": f"{val_decimal:.16f}",
-                "Redondeo (5 decimales)": f"{rounded_5:.5f}",
-                "Redondeo (2 decimales)": f"{rounded_2:.2f}",
-                "Valor decimal": val_decimal
-            })
-        except:
-            st.error(f"Oferente {i+1}: valor no válido")
-            st.stop()
+    ' Marcar al oferente con el menor valor real
+    For i = 2 To ultimaFila
+        If Cells(i, 1).Value = menorValor Then
+            Cells(i, 3).Value = "MENOR"
+            Cells(i, 1).Interior.Color = RGB(198, 239, 206) ' Verde claro
+        End If
+    Next i
 
-    df = pd.DataFrame(results)
-
-    st.subheader("Resultados")
-
-    # Ordenar por menor valor decimal
-    winner_row = df["Valor decimal"].idxmin()
-    df["Resultado"] = ""
-    df.loc[winner_row, "Resultado"] = "Ganador (menor precio)"
-
-    st.dataframe(df.drop(columns=["Valor decimal"]), use_container_width=True)
+    ' Encabezados opcionales
+    Range("A1").Value = "Valor Real"
+    Range("B1").Value = "Visual (4 decimales)"
+    Range("C1").Value = "¿Ganador?"
+    
+    MsgBox "Evaluación completa. El oferente con el valor más bajo real ha sido identificado.", vbInformation
+End Sub
